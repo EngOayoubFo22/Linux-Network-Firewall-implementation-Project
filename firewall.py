@@ -112,17 +112,17 @@ class SimpleFirewall:
         print(f"All rules removed from {chain_name.upper()} chain.")
 
 
-## test 
-if __name__ == "__main__":
-    fw = SimpleFirewall()
+# ## test 
+# if __name__ == "__main__":
+#     fw = SimpleFirewall()
 
-    # Test adding rule
-    fw.add_rule("INPUT", "tcp", 8080, "ACCEPT")
+#     # Test adding rule
+#     fw.add_rule("INPUT", "tcp", 8080, "ACCEPT")
 
-    # Test listing
-    fw.list_rules("INPUT")
+#     # Test listing
+#     fw.list_rules("INPUT")
 
-    # Test removing rule
-    fw.remove_rule_by_spec("INPUT", "tcp", 8080, "ACCEPT")
+#     # Test removing rule
+#     fw.remove_rule_by_spec("INPUT", "tcp", 8080, "ACCEPT")
 
-    fw.list_rules("INPUT")
+#     fw.list_rules("INPUT")
