@@ -1,3 +1,4 @@
+import Network as nw
 """
 def firewall_clI():
     print("\n=== Simple Firewall CLI ===")
@@ -232,6 +233,7 @@ def main():
 
         # ---------------- Network Settings ----------------
         if main_choice == 1:
+            nm=nw.NetworkManager()
             print("\n=== Network Settings ===")
             print("1. Show current network interfaces and IPs")
             print("2. Enable/Disable a network interface")
@@ -240,6 +242,7 @@ def main():
             print("5. Save Configurations")
             print("6. Back to Main Menu")
 
+
             try:
                 net_choice = int(input("Choose option [1-6]: ").strip())
             except ValueError:
@@ -247,11 +250,18 @@ def main():
                 continue
 
             if net_choice == 1:
-                # TODO: call function to show interfaces and IPs
-                print("→ [Stub] Show current network interfaces and IPs")
+                nm.show_interfaces()
             elif net_choice == 2:
-                # TODO: call function to enable/disable interface
-                print("→ [Stub] Enable/Disable a network interface")
+                print("Available interfaces:", ", ".join(nm.get_interface_names()))
+                iface = input("Please enter the interface: ").strip()
+                option = input("Enter e to enable the interface and d to disable the interface").strip().lower()
+                if option=="e":
+                    nm.enable(iface)
+                elif option=="d":
+                    nm.disable(iface)
+                else:
+                    print("Please enter a valid option")
+
             elif net_choice == 3:
                 configure_static_ip()
                 print("→ [Stub] Configure static IP for an interface")

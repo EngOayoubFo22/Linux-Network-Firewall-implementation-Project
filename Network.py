@@ -15,13 +15,20 @@ class NetworkManager:
     def __init__(self):
         pass
 
-    def run_command(self, command):
 
+    def run_command(self, command):
         try:
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
-            return result.stdout.strip()
+
+            if result.returncode == 0:
+                    return "Command executed successfully!"
+            else:
+                    # Return the actual error message
+                    error_msg = result.stderr.strip() or "Unknown error."
+                    return f"Command failed: {error_msg}"
+
         except Exception as e:
-            return f"Error: {str(e)}"
+                return f"Exception: {str(e)}"
 
     def get_interfaces(self):
         """
@@ -58,11 +65,18 @@ class NetworkManager:
         return interfaces
 
     def enable(self, iface):
+        if iface not in psutil.net_if_addrs():
+            return f"Error: interface '{iface}' does not exist."
+
         return self.run_command(f"sudo ip link set dev {iface} up")
 
     def disable(self, iface):
+        if iface not in psutil.net_if_addrs():
+            return f"Error: interface '{iface}' does not exist."
         return self.run_command(f"sudo ip link set dev {iface} down")
 
+    def get_interface_names(self):
+        return list(psutil.net_if_addrs().keys())
     def show_interfaces(self):
         interfaces = self.get_interfaces()
         for iface, data in interfaces.items():
