@@ -61,3 +61,70 @@ Available commands:
 
         else:
             print("Unknown command. Type 'help'.")
+
+from netplan_configurator import NetplanConfigurator   # adjust module name if needed
+
+def configure_static_ip():
+    """Menu handler for: 3. Configure static IP for an interface"""
+    np = NetplanConfigurator()
+    np.check_root()
+
+    # Collect data from user
+    config_data = np.get_user_input()
+
+    # Build new config
+    config = np.configure(config_data)
+
+    # Show preview
+    np.display_config(config)
+
+    # Confirm and apply Save is required here 
+
+
+def configure_dhcp_ip():
+    """Menu handler for: 4. Set dynamic (DHCP) IP for an interface"""
+    np = NetplanConfigurator()
+    np.check_root()
+
+    # Get interfaces
+    interfaces = np.get_interfaces()
+    if not interfaces:
+        print("❌ No network interfaces found")
+        return
+
+    print("\n📌 Available interfaces:")
+    for i, iface in enumerate(interfaces, 1):
+        print(f"  {i}. {iface}")
+
+    # Select interface
+    while True:
+        try:
+            choice = int(input("\nSelect interface number to set DHCP: ")) - 1
+            if 0 <= choice < len(interfaces):
+                interface = interfaces[choice]
+                break
+            print("❌ Invalid selection")
+        except ValueError:
+            print("❌ Please enter a number")
+
+    # Load current config
+    config = np.load_config()
+
+    # Ensure structure exists
+    if 'network' not in config:
+        config['network'] = {'version': 2, 'ethernets': {}}
+    if 'ethernets' not in config['network']:
+        config['network']['ethernets'] = {}
+
+    # Set DHCP4 for the chosen interface
+    # Remove static-specific keys if present
+    config['network']['ethernets'][interface] = {
+        'dhcp4': True
+    }
+
+    # Show preview
+    np.display_config(config)
+
+    # Confirm and apply save function is required here 
+
+
