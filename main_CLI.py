@@ -64,42 +64,59 @@ Available commands:
 
 from netplan_configurator import NetplanConfigurator   # adjust module name if needed
 
+from netplan_configurator import NetplanConfigurator  # adjust module name if needed
+
+
 def configure_static_ip():
-    """Menu handler for: 3. Configure static IP for an interface"""
+    """Handler for: 3. Configure static IP for an interface"""
     np = NetplanConfigurator()
     np.check_root()
 
-    # Collect data from user
+    # Collect config data interactively (interface, IP, gateway, DNS, ...)
     config_data = np.get_user_input()
 
-    # Build new config
+    # Build full netplan configuration (static)
     config = np.configure(config_data)
 
     # Show preview
     np.display_config(config)
 
-    # Confirm and apply Save is required here 
+    # Confirm and apply
+    confirm = input("\nApply this STATIC IP configuration? (yes/no): ").strip().lower()
+    if confirm != "yes":
+        print("❌ Static configuration cancelled")
+        return
+
+  #  np.save_config(config)
+  #  if np.apply_config():
+      #  print("\n✓ Static IP configuration completed!")
+     #   print(f"   Interface: {config_data['interface']}")
+      #  print(f"   IP:       {config_data['ip'].split('/')[0]}")
+      #  print(f"   Gateway:  {config_data['gateway']}")
+       # print(f"   DNS:      {', '.join(config_data['dns'])}")
+   # else:
+    #    print("⚠️ Configuration saved but failed to apply")
 
 
 def configure_dhcp_ip():
-    """Menu handler for: 4. Set dynamic (DHCP) IP for an interface"""
+    """Handler for: 4. Set dynamic (DHCP) IP for an interface"""
     np = NetplanConfigurator()
     np.check_root()
 
-    # Get interfaces
+    # Get available interfaces
     interfaces = np.get_interfaces()
     if not interfaces:
         print("❌ No network interfaces found")
         return
 
-    print("\n📌 Available interfaces:")
+    print("\nAvailable interfaces:")
     for i, iface in enumerate(interfaces, 1):
         print(f"  {i}. {iface}")
 
     # Select interface
     while True:
         try:
-            choice = int(input("\nSelect interface number to set DHCP: ")) - 1
+            choice = int(input("\nSelect interface number to use DHCP: ")) - 1
             if 0 <= choice < len(interfaces):
                 interface = interfaces[choice]
                 break
@@ -107,24 +124,119 @@ def configure_dhcp_ip():
         except ValueError:
             print("❌ Please enter a number")
 
-    # Load current config
-    config = np.load_config()
-
-    # Ensure structure exists
-    if 'network' not in config:
-        config['network'] = {'version': 2, 'ethernets': {}}
-    if 'ethernets' not in config['network']:
-        config['network']['ethernets'] = {}
-
-    # Set DHCP4 for the chosen interface
-    # Remove static-specific keys if present
-    config['network']['ethernets'][interface] = {
-        'dhcp4': True
-    }
+    # Build full netplan configuration using your class method
+    # (assuming you implemented: configure_dhcp(self, interface) -> dict)
+    config = np.configure_dhcp(interface)
 
     # Show preview
     np.display_config(config)
 
-    # Confirm and apply save function is required here 
+    # Confirm and apply
+    confirm = input("\nApply this DHCP configuration? (yes/no): ").strip().lower()
+    if confirm != "yes":
+        print("❌ DHCP configuration cancelled")
+        return
+
+    #np.save_config(config)
+    #if np.apply_config():
+     #   print(f"\n✓ DHCP enabled on interface: {interface}")
+    #else:
+     #   print("⚠️ Configuration saved but failed to apply")
+
+
+def main():
+    while True:
+        print("\n=== Main Menu ===")
+        print("1. Alter Network Settings")
+        print("2. Alter Firewall Settings")
+        print("3. Exit")
+
+        try:
+            main_choice = int(input("Choose option [1-3]: ").strip())
+        except ValueError:
+            print("❌ Please enter a valid number.")
+            continue
+
+        # ---------------- Network Settings ----------------
+        if main_choice == 1:
+            print("\n=== Network Settings ===")
+            print("1. Show current network interfaces and IPs")
+            print("2. Enable/Disable a network interface")
+            print("3. Configure static IP for an interface")
+            print("4. Set dynamic (DHCP) IP for an interface")
+            print("5. Save Configurations")
+            print("6. Back to Main Menu")
+
+            try:
+                net_choice = int(input("Choose option [1-6]: ").strip())
+            except ValueError:
+                print("❌ Please enter a valid number.")
+                continue
+
+            if net_choice == 1:
+                # TODO: call function to show interfaces and IPs
+                print("→ [Stub] Show current network interfaces and IPs")
+            elif net_choice == 2:
+                # TODO: call function to enable/disable interface
+                print("→ [Stub] Enable/Disable a network interface")
+            elif net_choice == 3:
+                # TODO: call configure_static_ip()
+                print("→ [Stub] Configure static IP for an interface")
+            elif net_choice == 4:
+                # TODO: call configure_dhcp_ip()
+                print("→ [Stub] Set dynamic (DHCP) IP for an interface")
+            elif net_choice == 5:
+                # TODO: call function to save configurations, if needed
+                print("→ [Stub] Save configurations")
+            elif net_choice == 6:
+                # back to main menu
+                continue
+            else:
+                print("❌ Invalid option in Network Settings.")
+
+        # ---------------- Firewall Settings ----------------
+        elif main_choice == 2:
+            print("\n=== Firewall Settings ===")
+            print("1. Show current firewall rules")
+            print("2. Add a new firewall rule")
+            print("3. Delete a firewall rule")
+            print("4. Save Configurations")
+            print("5. Back to Main Menu")
+
+            try:
+                fw_choice = int(input("Choose option [1-5]: ").strip())
+            except ValueError:
+                print("❌ Please enter a valid number.")
+                continue
+
+            if fw_choice == 1:
+                # TODO: call function to show firewall rules
+                print("→ [Stub] Show current firewall rules")
+            elif fw_choice == 2:
+                # TODO: call function to add firewall rule
+                print("→ [Stub] Add a new firewall rule")
+            elif fw_choice == 3:
+                # TODO: call function to delete firewall rule
+                print("→ [Stub] Delete a firewall rule")
+            elif fw_choice == 4:
+                # TODO: call function to save firewall config
+                print("→ [Stub] Save firewall configurations")
+            elif fw_choice == 5:
+                # back to main menu
+                continue
+            else:
+                print("❌ Invalid option in Firewall Settings.")
+
+        # ---------------- Exit ----------------
+        elif main_choice == 3:
+            print("Exiting…")
+            break
+        else:
+            print("❌ Invalid main menu option.")
+
+
+if __name__ == "__main__":
+    main()
+
 
 
