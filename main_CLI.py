@@ -1,3 +1,4 @@
+"""
 def firewall_clI():
     print("\n=== Simple Firewall CLI ===")
     print("Type 'help' to show commands.")
@@ -13,7 +14,7 @@ def firewall_clI():
             break
 
         elif cmd == "help":
-            print("""
+            print(
 Available commands:
 
   add            -> Add a firewall rule
@@ -22,7 +23,7 @@ Available commands:
   list           -> List rules in a chain
   clear          -> Remove all rules in a chain
   exit           -> Quit program
-""")
+)
 
         # -----------------------------------------
         elif cmd == "add":
@@ -61,6 +62,78 @@ Available commands:
 
         else:
             print("Unknown command. Type 'help'.")
+"""
+# Make sure SimpleFirewall is imported from wherever you defined it
+# from firewall_module import SimpleFirewall
+
+
+def show_firewall_rules():
+    """
+    Show current firewall rules for a chosen chain.
+    This matches: 'Show current firewall rules' in your main menu.
+    """
+    fw = SimpleFirewall()
+    chain = input("Chain to list (INPUT/OUTPUT/FORWARD): ").strip()
+    fw.list_rules(chain)
+
+
+def add_firewall_rule():
+    """
+    Add a firewall rule (interactive).
+    This matches: 'Add a new firewall rule' in your main menu.
+    """
+    fw = SimpleFirewall()
+
+    chain = input("Chain (INPUT/OUTPUT/FORWARD): ").strip()
+    protocol = input("Protocol (tcp/udp/icmp): ").strip()
+
+    port = None
+    if protocol.lower() in ["tcp", "udp"]:
+        port = input("Destination port: ").strip()
+
+    action = input("Action (ACCEPT/DROP/REJECT): ").strip()
+
+    fw.add_rule(chain, protocol, port, action)
+
+
+def delete_firewall_rule():
+    """
+    Delete a firewall rule.
+    This matches: 'Delete a firewall rule' in your main menu.
+    The user can choose whether to delete by specification or by rule number.
+    """
+    fw = SimpleFirewall()
+
+    print("\nDelete rule by:")
+    print("  1. Full specification (chain, protocol, port, action)")
+    print("  2. Rule number (index in chain)")
+
+    choice = input("Choose option [1-2]: ").strip()
+
+    if choice == "1":
+        chain = input("Chain (INPUT/OUTPUT/FORWARD): ").strip()
+        protocol = input("Protocol (tcp/udp/icmp): ").strip()
+        port = input("Destination port (leave empty if not applicable): ").strip()
+        action = input("Action (ACCEPT/DROP/REJECT): ").strip()
+
+        if port == "":
+            port = None
+
+        fw.remove_rule_by_spec(chain, protocol, port, action)
+
+    elif choice == "2":
+        chain = input("Chain (INPUT/OUTPUT/FORWARD): ").strip()
+        try:
+            number = int(input("Rule number: ").strip())
+        except ValueError:
+            print("❌ Invalid rule number.")
+            return
+
+        fw.remove_rule_by_number(chain, number)
+
+    else:
+        print("❌ Invalid choice, no rule deleted.")
+
 
 from netplan_configurator import NetplanConfigurator   # adjust module name if needed
 
@@ -210,14 +283,11 @@ def main():
                 continue
 
             if fw_choice == 1:
-                # TODO: call function to show firewall rules
-                print("→ [Stub] Show current firewall rules")
+                show_firewall_rules()
             elif fw_choice == 2:
-                # TODO: call function to add firewall rule
-                print("→ [Stub] Add a new firewall rule")
+                add_firewall_rule()
             elif fw_choice == 3:
-                # TODO: call function to delete firewall rule
-                print("→ [Stub] Delete a firewall rule")
+                 delete_firewall_rule()
             elif fw_choice == 4:
                 # TODO: call function to save firewall config
                 print("→ [Stub] Save firewall configurations")
