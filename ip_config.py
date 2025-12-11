@@ -115,8 +115,37 @@ class NetplanConfigurator:
             'gateway': gateway,
             'dns': dns_servers
         }
-    
-    def configure(self, config_data):
+    def configure_dhcp(self, interface):
+        """
+        Build a netplan configuration that enables DHCP (dynamic IP)
+        on the given interface, removing any static IPv4 settings.
+        
+        Returns the full netplan config dict (same style as configure()).
+        """
+        config = self.load_config()
+
+        # Ensure base structure
+        if 'network' not in config:
+            config['network'] = {'version': 2, 'ethernets': {}}
+        if 'ethernets' not in config['network']:
+            config['network']['ethernets'] = {}
+
+        # Get existing interface config or start a new one
+        iface_cfg = config['network']['ethernets'].get(interface, {})
+
+        # Remove static IPv4 settings if present
+        for key in ['addresses', 'gateway4', 'nameservers', 'routes']:
+            iface_cfg.pop(key, None)
+
+        # Enable DHCP for IPv4
+        iface_cfg['dhcp4'] = True
+
+        # Put it back into the config
+        config['network']['ethernets'][interface] = iface_cfg
+
+        return config
+
+    def configure_static(self, config_data):
         """Apply configuration to netplan YAML"""
         config = self.load_config()
         
@@ -202,3 +231,4 @@ class NetplanConfigurator:
 #if __name__ == "__main__":
  #   configurator = NetplanConfigurator()
   #  configurator.run()
+
