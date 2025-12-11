@@ -180,10 +180,10 @@ def main():
                 # TODO: call function to enable/disable interface
                 print("→ [Stub] Enable/Disable a network interface")
             elif net_choice == 3:
-                # TODO: call configure_static_ip()
+                configure_static_ip()
                 print("→ [Stub] Configure static IP for an interface")
             elif net_choice == 4:
-                # TODO: call configure_dhcp_ip()
+                configure_dhcp_ip()
                 print("→ [Stub] Set dynamic (DHCP) IP for an interface")
             elif net_choice == 5:
                 # TODO: call function to save configurations, if needed
