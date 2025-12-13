@@ -126,3 +126,109 @@ class SimpleFirewall:
 #     fw.remove_rule_by_spec("INPUT", "tcp", 8080, "ACCEPT")
 
 #     fw.list_rules("INPUT")
+
+
+# Added for persistence
+    def get_all_rules(self):
+        """
+        Get all firewall rules in a structured format for saving.
+
+        This method extracts all rules from all chains (INPUT, OUTPUT, FORWARD)
+        and converts them to dictionaries that can be saved to JSON.
+
+        Returns:
+            list: List of rule dictionaries with structure:
+                [
+                    {
+                        'chain': 'INPUT',
+                        'protocol': 'tcp',
+                        'port': '22',
+                        'action': 'ACCEPT',
+                        'description': 'tcp ACCEPT rule'
+                    },
+                    ...
+                ]
+        """
+        all_rules = []
+
+        # Chains to check (standard firewall chains)
+        chains = ['INPUT', 'OUTPUT', 'FORWARD']
+
+        for chain_name in chains:
+            try:
+                # Get the chain from iptc
+                chain = iptc.Chain(self.table, chain_name)
+
+                # Process each rule in the chain
+                for rule in chain.rules:
+                    # Extract rule information
+                    rule_dict = self._extract_rule_info(rule, chain_name)
+
+                    # Only add if we got valid rule info
+                    if rule_dict:
+                        all_rules.append(rule_dict)
+
+            except Exception as e:
+                print(f"⚠️  Warning: Could not get rules for {chain_name}: {e}")
+
+        return all_rules
+
+    def _extract_rule_info(self, rule, chain_name):
+        """
+        Extract information from an iptc.Rule object into a dictionary.
+
+        This is a helper method that converts iptc's rule format into
+        our simple dictionary format for saving.
+
+        Args:
+            rule: iptc.Rule object
+            chain_name: Name of the chain (INPUT/OUTPUT/FORWARD)
+
+        Returns:
+            dict: Rule information or None if extraction fails
+        """
+        try:
+            # Basic rule information
+            rule_dict = {
+                'chain': chain_name,
+                'protocol': rule.protocol,
+                'action': rule.target.name if rule.target else 'UNKNOWN'
+            }
+
+            # Extract destination port if it exists
+            # iptc stores port info in matches
+            dport = None
+            for match in rule.matches:
+                if hasattr(match, 'dport'):
+                    dport = match.dport
+                    break
+
+            if dport:
+                rule_dict['port'] = dport
+
+            # Create a description
+            if dport:
+                rule_dict['description'] = f"{rule.protocol} port {dport} -> {rule.target.name}"
+            else:
+                rule_dict['description'] = f"{rule.protocol} -> {rule.target.name}"
+
+            return rule_dict
+
+        except Exception as e:
+            print(f"⚠️  Warning: Could not extract rule info: {e}")
+            return None
+
+    def get_rules_for_chain(self, chain_name):
+        """
+        Get rules for a specific chain only.
+
+        This is a convenience method if you only want rules from one chain.
+
+        Args:
+            chain_name: Chain name (INPUT/OUTPUT/FORWARD)
+
+        Returns:
+            list: List of rule dictionaries for that chain
+        """
+        all_rules = self.get_all_rules()
+        return [rule for rule in all_rules if rule['chain'] == chain_name]

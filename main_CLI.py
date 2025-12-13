@@ -1,77 +1,16 @@
 import Network as nw
-"""
-def firewall_clI():
-    print("\n=== Simple Firewall CLI ===")
-    print("Type 'help' to show commands.")
-    print("Type 'exit' to quit.\n")
+from firewall import *
+import persistence as pst
+from ip_config import NetplanConfigurator
 
-    fw = SimpleFirewall()   
 
-    while True:
-        cmd = input("fw> ").strip().lower()
-
-        if cmd == "exit":
-            print("Exiting firewall CLI.")
-            break
-
-        elif cmd == "help":
-            print(
-Available commands:
-
-  add            -> Add a firewall rule
-  remove-spec    -> Remove rule by specification (protocol, port, action)
-  remove-num     -> Remove rule by rule index number
-  list           -> List rules in a chain
-  clear          -> Remove all rules in a chain
-  exit           -> Quit program
-)
-
-        # -----------------------------------------
-        elif cmd == "add":
-            chain = input("Chain (INPUT/OUTPUT/FORWARD): ").strip()
-            protocol = input("Protocol (tcp/udp/icmp): ").strip()
-            port = None
-            if protocol.lower() in ["tcp", "udp"]:
-                port = input("Destination port: ").strip()
-            action = input("Action (ACCEPT/DROP/REJECT): ").strip()
-
-            fw.add_rule(chain, protocol, port, action)
-
-        # -----------------------------------------
-        elif cmd == "remove-spec":
-            chain = input("Chain: ").strip()
-            protocol = input("Protocol: ").strip()
-            port = input("Destination port: ").strip()
-            action = input("Action: ").strip()
-            fw.remove_rule_by_spec(chain, protocol, port, action)
-
-        # -----------------------------------------
-        elif cmd == "remove-num":
-            chain = input("Chain: ").strip()
-            number = int(input("Rule number: ").strip())
-            fw.remove_rule_by_number(chain, number)
-
-        # -----------------------------------------
-        elif cmd == "list":
-            chain = input("Chain: ").strip()
-            fw.list_rules(chain)
-
-        # -----------------------------------------
-        elif cmd == "clear":
-            chain = input("Chain: ").strip()
-            fw.remove_all_rules(chain)
-
-        else:
-            print("Unknown command. Type 'help'.")
-"""
-# Make sure SimpleFirewall is imported from wherever you defined it
-# from firewall_module import SimpleFirewall
-
+# ==============================================================================
+# FIREWALL MENU FUNCTIONS
+# ==============================================================================
 
 def show_firewall_rules():
     """
     Show current firewall rules for a chosen chain.
-    This matches: 'Show current firewall rules' in your main menu.
     """
     fw = SimpleFirewall()
     chain = input("Chain to list (INPUT/OUTPUT/FORWARD): ").strip()
@@ -81,7 +20,6 @@ def show_firewall_rules():
 def add_firewall_rule():
     """
     Add a firewall rule (interactive).
-    This matches: 'Add a new firewall rule' in your main menu.
     """
     fw = SimpleFirewall()
 
@@ -100,8 +38,6 @@ def add_firewall_rule():
 def delete_firewall_rule():
     """
     Delete a firewall rule.
-    This matches: 'Delete a firewall rule' in your main menu.
-    The user can choose whether to delete by specification or by rule number.
     """
     fw = SimpleFirewall()
 
@@ -136,13 +72,17 @@ def delete_firewall_rule():
         print("❌ Invalid choice, no rule deleted.")
 
 
-from netplan_configurator import NetplanConfigurator   # adjust module name if needed
+# ==============================================================================
+# NETWORK IP CONFIGURATION FUNCTIONS
+# ==============================================================================
 
-from netplan_configurator import NetplanConfigurator  # adjust module name if needed
+def configure_static_ip(config_manager, nm, fw):
+    """
+    Handler for: 3. Configure static IP for an interface
 
-
-def configure_static_ip():
-    """Handler for: 3. Configure static IP for an interface"""
+    🔧 CHANGE: Added config_manager, nm, fw parameters
+    WHY: So we can auto-save after configuration
+    """
     np = NetplanConfigurator()
     np.check_root()
 
@@ -150,7 +90,7 @@ def configure_static_ip():
     config_data = np.get_user_input()
 
     # Build full netplan configuration (static)
-    config = np.configure(config_data)
+    config = np.configure_static(config_data)
 
     # Show preview
     np.display_config(config)
@@ -161,19 +101,34 @@ def configure_static_ip():
         print("❌ Static configuration cancelled")
         return
 
-  #  np.save_config(config)
-  #  if np.apply_config():
-      #  print("\n✓ Static IP configuration completed!")
-     #   print(f"   Interface: {config_data['interface']}")
-      #  print(f"   IP:       {config_data['ip'].split('/')[0]}")
-      #  print(f"   Gateway:  {config_data['gateway']}")
-       # print(f"   DNS:      {', '.join(config_data['dns'])}")
-   # else:
-    #    print("⚠️ Configuration saved but failed to apply")
+    # Apply the configuration
+    np.save_config(config)
+    if np.apply_config():
+        print("\n✓ Static IP configuration completed!")
+        print(f"   Interface: {config_data['interface']}")
+        print(f"   IP:       {config_data['ip'].split('/')[0]}")
+        print(f"   Gateway:  {config_data['gateway']}")
+        print(f"   DNS:      {', '.join(config_data['dns'])}")
+
+        # =====================================================================
+        # 🆕 NEW: Auto-save after successful configuration
+        # =====================================================================
+        print("\n💾 Auto-saving configuration...")
+        save_current_configuration(config_manager, nm, fw)
+        # WHY: User just changed IP settings, we should save it automatically
+        # so it persists after reboot
+        # =====================================================================
+    else:
+        print("⚠️ Configuration saved but failed to apply")
 
 
-def configure_dhcp_ip():
-    """Handler for: 4. Set dynamic (DHCP) IP for an interface"""
+def configure_dhcp_ip(config_manager, nm, fw):
+    """
+    Handler for: 4. Set dynamic (DHCP) IP for an interface
+
+    🔧 CHANGE: Added config_manager, nm, fw parameters
+    WHY: So we can auto-save after configuration
+    """
     np = NetplanConfigurator()
     np.check_root()
 
@@ -198,8 +153,7 @@ def configure_dhcp_ip():
         except ValueError:
             print("❌ Please enter a number")
 
-    # Build full netplan configuration using your class method
-    # (assuming you implemented: configure_dhcp(self, interface) -> dict)
+    # Build full netplan configuration for DHCP
     config = np.configure_dhcp(interface)
 
     # Show preview
@@ -211,14 +165,182 @@ def configure_dhcp_ip():
         print("❌ DHCP configuration cancelled")
         return
 
-    #np.save_config(config)
-    #if np.apply_config():
-     #   print(f"\n✓ DHCP enabled on interface: {interface}")
-    #else:
-     #   print("⚠️ Configuration saved but failed to apply")
+    # Apply the configuration
+    np.save_config(config)
+    if np.apply_config():
+        print(f"\n✓ DHCP enabled on interface: {interface}")
 
+        # =====================================================================
+        # 🔧 FIX: Wait for DHCP to get IP, then save
+        # =====================================================================
+        import time
+        print("\n⏳ Waiting for DHCP to assign IP address...")
+        time.sleep(3)  # Give DHCP client time to get IP
+
+        print("💾 Auto-saving configuration...")
+        save_current_configuration(config_manager, nm, fw)
+        # WHY: User just changed to DHCP, we should save it so it persists
+        # =====================================================================
+    else:
+        print("⚠️ Configuration saved but failed to apply")
+
+
+# ==============================================================================
+# 🆕 PERSISTENCE HELPER FUNCTIONS (NEW!)
+# ==============================================================================
+
+def capture_current_network_state(nm, fw):
+    """
+    Capture current network and firewall state for saving.
+
+    This captures:
+    1. Interface states (UP/DOWN, IPs) from NetworkManager
+    2. Firewall rules from SimpleFirewall
+    3. The FULL netplan YAML configuration
+
+    Returns a dict ready to be saved by persistence.py
+    """
+    config = {
+        'interfaces': {},
+        'firewall_rules': [],
+        'netplan_config': {}  # ✅ NEW: Store full netplan config
+    }
+
+    # Step 1: Capture network interface states
+    try:
+        all_interfaces = nm.get_interfaces()
+
+        for interface, state in all_interfaces.items():
+            config['interfaces'][interface] = {
+                'status': state['status'],
+                'ipv6': state['ipv6'],
+                'ipv4': state['ipv4'],
+                'mac': state['mac']
+            }
+
+        print(f"✓ Captured state for {len(config['interfaces'])} interface(s)")
+
+    except Exception as e:
+        print(f"⚠️  Warning: Could not capture interface state: {e}")
+
+    # STEP 2: Capture firewall rules
+    try:
+        rules = fw.get_all_rules()
+        config['firewall_rules'] = rules
+        print(f"✓ Captured {len(rules)} firewall rule(s)")
+
+    except Exception as e:
+        print(f"⚠️  Warning: Could not capture firewall rules: {e}")
+
+
+    # Step 3: Capture full netplan configuration
+    try:
+        from ip_config import NetplanConfigurator
+        np = NetplanConfigurator()
+
+        # Load the FULL netplan config (includes network, version, ethernets)
+        netplan_config = np.load_config()
+
+        # ✅ CRITICAL: Save the ENTIRE config, not just ethernets
+        config['netplan_config'] = netplan_config
+
+        # Show what we captured
+        if 'network' in netplan_config and 'ethernets' in netplan_config['network']:
+            num_ifaces = len(netplan_config['network']['ethernets'])
+            print(f"✓ Captured full netplan configuration ({num_ifaces} interface(s))")
+        else:
+            print(f"⚠️  Warning: Netplan config is empty or malformed")
+
+    except Exception as e:
+        print(f"⚠️  Warning: Could not capture netplan config: {e}")
+        config['netplan_config'] = {'network': {'version': 2, 'ethernets': {}}}
+
+    # WHY THIS MATTERS:
+    # - We need the FULL netplan structure {'network': {'version': 2, 'ethernets': {...}}}
+    # - Not just the 'ethernets' part
+    # - This way when we restore, we write back the exact same YAML structure
+    # =========================================================================
+
+    return config
+
+
+def save_current_configuration(config_manager, nm, fw):
+    """
+    Save current network configuration to disk.
+    This is called when user selects "Save Configurations" from menu.
+    """
+    print("\n💾 Saving current configuration...")
+
+    # ✅ Capture includes full netplan config now
+    current_config = capture_current_network_state(nm, fw)
+
+    # Save to disk
+    if config_manager.save_configuration(current_config):
+        print("✅ Configuration saved successfully!")
+        print("   Your settings will persist after reboot.")
+    else:
+        print("❌ Failed to save configuration.")
+
+
+def restore_saved_configuration(config_manager, nm, fw):
+    """
+    Load and apply previously saved configuration.
+    Called automatically when the program starts.
+    """
+    print("\n🔄 Checking for saved configuration...")
+
+    # Try to load saved configuration
+    saved_config = config_manager.load_configuration()
+
+    if not saved_config:
+        print("ℹ️  No previous configuration found (this is normal for first run)")
+        return False
+
+    # Show user what was saved
+    print(f"✅ Found saved configuration from: {saved_config.get('timestamp', 'unknown time')}")
+    print("\nSaved configuration contains:")
+    print(f"  - {len(saved_config.get('interfaces', {}))} network interface(s)")
+    print(f"  - {len(saved_config.get('firewall_rules', []))} firewall rule(s)")
+
+    # Check if netplan config exists
+    if 'netplan_config' in saved_config:
+        if 'network' in saved_config['netplan_config']:
+            ethernets = saved_config['netplan_config'].get('network', {}).get('ethernets', {})
+            print(f"  - Netplan configuration for {len(ethernets)} interface(s)")
+    else:
+        print(f"  ⚠️  No netplan configuration found (may not restore IP settings)")
+
+    # Ask user if they want to restore
+    restore = input("\nRestore this configuration? (yes/no): ").strip().lower()
+
+    if restore != 'yes':
+        print("→ Starting with current system configuration")
+        return False
+
+    # Apply the saved configuration
+    print("\n→ Restoring configuration...")
+
+    if config_manager.apply_network_configuration(saved_config):
+        print("✅ Configuration restored successfully!")
+        return True
+    else:
+        print("⚠️  Some settings may not have been applied correctly")
+        return False
+
+
+# ==============================================================================
+# MAIN PROGRAM
+# ==============================================================================
 
 def main():
+    config_manager = pst.NetworkConfigManager()
+    nm = nw.NetworkManager()
+    fw = SimpleFirewall()
+    restore_saved_configuration(config_manager, nm, fw)
+
+    # =========================================================================
+    # Main menu loop
+    # =========================================================================
     while True:
         print("\n=== Main Menu ===")
         print("1. Alter Network Settings")
@@ -231,9 +353,10 @@ def main():
             print("❌ Please enter a valid number.")
             continue
 
-        # ---------------- Network Settings ----------------
+        # =====================================================================
+        # NETWORK SETTINGS SUBMENU
+        # =====================================================================
         if main_choice == 1:
-            nm=nw.NetworkManager()
             print("\n=== Network Settings ===")
             print("1. Show current network interfaces and IPs")
             print("2. Enable/Disable a network interface")
@@ -242,7 +365,6 @@ def main():
             print("5. Save Configurations")
             print("6. Back to Main Menu")
 
-
             try:
                 net_choice = int(input("Choose option [1-6]: ").strip())
             except ValueError:
@@ -250,34 +372,41 @@ def main():
                 continue
 
             if net_choice == 1:
+                # Show current interfaces
                 nm.show_interfaces()
+
             elif net_choice == 2:
+                # Enable/Disable interface
                 print("Available interfaces:", ", ".join(nm.get_interface_names()))
                 iface = input("Please enter the interface: ").strip()
-                option = input("Enter e to enable the interface and d to disable the interface").strip().lower()
-                if option=="e":
-                    nm.enable(iface)
-                elif option=="d":
-                    nm.disable(iface)
+                option = input("Enter 'e' to enable or 'd' to disable: ").strip().lower()
+
+                if option == "e":
+                    result = nm.enable(iface)
+                    print(result)
+                elif option == "d":
+                    result = nm.disable(iface)
+                    print(result)
                 else:
-                    print("Please enter a valid option")
+                    print("❌ Please enter a valid option (e or d)")
 
             elif net_choice == 3:
-                configure_static_ip()
-                print("→ [Stub] Configure static IP for an interface")
+                configure_static_ip(config_manager, nm, fw)
             elif net_choice == 4:
-                configure_dhcp_ip()
-                print("→ [Stub] Set dynamic (DHCP) IP for an interface")
+                configure_dhcp_ip(config_manager, nm, fw)
+
             elif net_choice == 5:
-                # TODO: call function to save configurations, if needed
-                print("→ [Stub] Save configurations")
+                save_current_configuration(config_manager, nm, fw)
+
             elif net_choice == 6:
-                # back to main menu
+                # Back to main menu
                 continue
             else:
                 print("❌ Invalid option in Network Settings.")
 
-        # ---------------- Firewall Settings ----------------
+        # =====================================================================
+        # FIREWALL SETTINGS SUBMENU
+        # =====================================================================
         elif main_choice == 2:
             print("\n=== Firewall Settings ===")
             print("1. Show current firewall rules")
@@ -293,21 +422,29 @@ def main():
                 continue
 
             if fw_choice == 1:
+                # Show firewall rules
                 show_firewall_rules()
+
             elif fw_choice == 2:
+                # Add firewall rule
                 add_firewall_rule()
+
             elif fw_choice == 3:
-                 delete_firewall_rule()
+                # Delete firewall rule
+                delete_firewall_rule()
+
             elif fw_choice == 4:
-                # TODO: call function to save firewall config
-                print("→ [Stub] Save firewall configurations")
+                save_current_configuration(config_manager, nm, fw)
+
             elif fw_choice == 5:
-                # back to main menu
+                # Back to main menu
                 continue
             else:
                 print("❌ Invalid option in Firewall Settings.")
 
-        # ---------------- Exit ----------------
+        # =====================================================================
+        # EXIT
+        # =====================================================================
         elif main_choice == 3:
             print("Exiting…")
             break
@@ -317,6 +454,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-

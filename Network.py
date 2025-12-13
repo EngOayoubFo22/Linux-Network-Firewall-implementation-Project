@@ -1,7 +1,7 @@
 import subprocess
 import psutil
 import socket
-
+import re
 
 class NetworkManager:
     """
@@ -29,6 +29,65 @@ class NetworkManager:
 
         except Exception as e:
                 return f"Exception: {str(e)}"
+
+    def get_interface_state(self, interface):
+        """
+        Get current state of a network interface.
+
+        Args:
+            interface: Interface name (e.g., 'eth0', 'wlan0')
+
+        Returns:
+            dict: Interface state containing:
+                - enabled: bool (is interface up?)
+                - addresses: list of IP addresses
+                - type: 'static' or 'dhcp' (simplified detection)
+        """
+        state = {
+            'enabled': False,
+            'addresses': [],
+            'type': 'unknown'
+        }
+
+        try:
+            # Get interface details using 'ip addr show'
+            result = subprocess.run(
+                ['ip', 'addr', 'show', interface],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+
+            output = result.stdout
+
+            # Check if interface is UP
+            if 'state UP' in output or 'UP' in output.split('\n')[0]:
+                state['enabled'] = True
+
+            # Extract IP addresses
+            # Look for lines like: inet 192.168.1.100/24
+            ip_pattern = r'inet (\d+\.\d+\.\d+\.\d+)/(\d+)'
+            matches = re.findall(ip_pattern, output)
+
+            for ip, netmask in matches:
+                if ip != '127.0.0.1':  # Skip localhost
+                    state['addresses'].append({
+                        'ip': ip,
+                        'netmask': netmask
+                    })
+
+            # Simple heuristic: if it has an IP, assume it's configured
+            # (Real detection would need to check DHCP lease files or netplan config)
+            if state['addresses']:
+                state['type'] = 'configured'
+
+        except subprocess.CalledProcessError as e:
+            print(f"⚠️  Could not get state for {interface}: {e}")
+        except Exception as e:
+            print(f"⚠️  Error reading {interface} state: {e}")
+
+        return state
+
 
     def get_interfaces(self):
         """
@@ -77,6 +136,7 @@ class NetworkManager:
 
     def get_interface_names(self):
         return list(psutil.net_if_addrs().keys())
+
     def show_interfaces(self):
         interfaces = self.get_interfaces()
         for iface, data in interfaces.items():
@@ -85,9 +145,4 @@ class NetworkManager:
             print(f"  MAC    : {data['mac']}")
             print(f"  IPv4   : {', '.join(data['ipv4']) if data['ipv4'] else 'None'}")
             print(f"  IPv6   : {', '.join(data['ipv6']) if data['ipv6'] else 'None'}")
-
-
-nm = NetworkManager()
-i = nm.enable("eth0")
-nm.show_interfaces()
 
